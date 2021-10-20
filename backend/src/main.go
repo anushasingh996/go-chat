@@ -66,5 +66,5 @@ func writer() {
 
 func main() {
 	setupRoutes()
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8001", nil)
 }

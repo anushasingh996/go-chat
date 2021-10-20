@@ -1,12 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"log"
 	"os"
 	"os/signal"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -31,26 +30,22 @@ func main() {
 
 	signal.Notify(interrupt, os.Interrupt) // Notify the interrupt channel for SIGINT
 
-	socketUrl := "ws://localhost:8080" + "/ws"
+	socketUrl := "ws://localhost:8001" + "/ws"
 	conn, _, err := websocket.DefaultDialer.Dial(socketUrl, nil)
 	if err != nil {
 		log.Fatal("Error connecting to Websocket Server:", err)
 	}
 	defer conn.Close()
 	go receiveHandler(conn)
-	uuidWithHyphen := uuid.New().String()
-	for {
-		select {
-		case <-time.After(time.Duration(1) * time.Millisecond * 1000):
-			// Send an echo packet every second
-			err := conn.WriteMessage(websocket.TextMessage, []byte(uuidWithHyphen))
-			if err != nil {
-				log.Println("Error during writing to websocket:", err)
-				return
-			}
-
-		case <-interrupt:
-			// We received a SIGINT (Ctrl + C). Terminate gracefully...
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		err := conn.WriteMessage(websocket.TextMessage, []byte(scanner.Text()))
+		if err != nil {
+			log.Println("Error during writing to websocket:", err)
+			return
+		}
+		_, ok := <-interrupt
+		if ok {
 			log.Println("Received SIGINT interrupt signal. Closing all pending connections")
 
 			// Close our websocket connection
@@ -59,14 +54,32 @@ func main() {
 				log.Println("Error during closing websocket:", err)
 				return
 			}
-
-			select {
-			case <-done:
-				log.Println("Receiver Channel Closed! Exiting....")
-			case <-time.After(time.Duration(1) * time.Second):
-				log.Println("Timeout in closing receiving channel. Exiting....")
-			}
-			return
 		}
 	}
+	// for {
+
+	// 	select {
+	// 	case <-time.After(time.Duration(3) * time.Millisecond * 1000):
+	// 		// Send an echo packet every second
+
+	// 	case <-interrupt:
+	// 		// We received a SIGINT (Ctrl + C). Terminate gracefully...
+	// 		log.Println("Received SIGINT interrupt signal. Closing all pending connections")
+
+	// 		// Close our websocket connection
+	// 		err := conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	// 		if err != nil {
+	// 			log.Println("Error during closing websocket:", err)
+	// 			return
+	// 		}
+
+	// 		select {
+	// 		case <-done:
+	// 			log.Println("Receiver Channel Closed! Exiting....")
+	// 		case <-time.After(time.Duration(1) * time.Second):
+	// 			log.Println("Timeout in closing receiving channel. Exiting....")
+	// 		}
+	// 		return
+	// 	}
+	// }
 }
