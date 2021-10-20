@@ -6,6 +6,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -37,12 +38,12 @@ func main() {
 	}
 	defer conn.Close()
 	go receiveHandler(conn)
-
+	uuidWithHyphen := uuid.New().String()
 	for {
 		select {
 		case <-time.After(time.Duration(1) * time.Millisecond * 1000):
 			// Send an echo packet every second
-			err := conn.WriteMessage(websocket.TextMessage, []byte("Hello from GolangDocs!"))
+			err := conn.WriteMessage(websocket.TextMessage, []byte(uuidWithHyphen))
 			if err != nil {
 				log.Println("Error during writing to websocket:", err)
 				return
